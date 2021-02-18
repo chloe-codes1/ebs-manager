@@ -17,6 +17,10 @@ def volume_modifier():
 
 class TestVolumeModifier:
 
-    def test_modify_volume_type(self, volume_modifier):
-        res = volume_modifier.modify_volume_type('YOUR VOLUME ID') 
-        write_json(title='test_modify_volume_type', contents=res)
+    def test_modify_volume_type(self, volume_modifier, setup_path):
+        """
+        Wait at least 6 hours between modifications per volume
+        """
+        volume_id = ''
+        res = volume_modifier.modify_volume_type(volume_id)
+        write_json(title='test_modify_volume_type.json', contents=res)
