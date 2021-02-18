@@ -1,6 +1,9 @@
+import sys
+
 from ec2.ec2_handler import EC2Handler
-from utils.file_handler import write_file, write_json
-from configs.configs import DEVEL_VPC, MANAGE_VPC, PRODUCT_VPC
+from utils.file_handler import write_file
+from configs.configs import DEVEL_VPC, MANAGE_VPC, PRODUCT_VPC, variables
+from ebs.volume_modifier import VolumeModifier
 
 
 class VolumeChecker:
@@ -8,6 +11,7 @@ class VolumeChecker:
     def __init__(self):
         ec2_handler = EC2Handler()
         self.volumes = ec2_handler.describe_volumes()['Volumes']
+        self.volume_modifier = VolumeModifier()
 
     def check_types(self):
         gp2 = gp3 = total = 0
@@ -26,17 +30,24 @@ class VolumeChecker:
 
     def check_if_asg_exists(self):
         ec2_handler = EC2Handler()
-        devel_asg_exists, product_asg_exists, manage_asg_exists, devel_asg_non_exists, product_asg_non_exists, manage_asg_non_exists, no_IID_tag, not_attached_ebs = (set() for _ in range(8))
+        devel_asg_exists, product_asg_exists, manage_asg_exists, devel_asg_non_exists, product_asg_non_exists, manage_asg_non_exists, no_IID_tag, not_attached_ebs, gp3_ebs = (set() for _ in range(9))
+
+        current = 30
 
         for volume in self.volumes:
             attachment, volume_id, volume_type = volume['Attachments'], volume['VolumeId'], volume['VolumeType']
 
             if not len(attachment):
                 not_attached_ebs.add(volume_id)
+                if volume_type == 'gp3':
+                    gp3_ebs.add(volume_id)
                 continue
 
             instance_id = attachment[0]['InstanceId']
-            vpc_id = ec2_handler.get_vpc_id(instance_id)
+            try:
+                vpc_id = ec2_handler.get_vpc_id(instance_id)
+            except Exception as e:
+                print(f'와이라노 {e} -> {volume}')
             tags = ec2_handler.get_ec2_tags(instance_id)
 
             IID = [tag['Value'] for tag in tags if tag['Key'] == 'IID']
@@ -49,6 +60,7 @@ class VolumeChecker:
                 elif IID[0] == 'yes':
                     if env == 'DEVEL':
                         devel_asg_exists.add(volume_id)
+                        self.volume_modifier.modify_volume_type(volume_id)
                     elif env == 'PRODUCT':
                         product_asg_exists.add(volume_id)
                     elif env == 'MANAGE':
@@ -62,23 +74,37 @@ class VolumeChecker:
                     elif env == 'MANAGE':
                         manage_asg_non_exists.add(volume_id)
 
-        print(f'ASG exists: {len(devel_asg_exists) + len(product_asg_exists) + len(manage_asg_exists)} -> PRODUCT: {len(product_asg_exists)}, DEVEL: {len(devel_asg_exists)}, MANAGE: {len(manage_asg_exists)}')
-        print(f'No ASG exits: {len(devel_asg_non_exists) + len(product_asg_non_exists) + len(manage_asg_non_exists)} -> PRODUCT: {len(product_asg_non_exists)}, DEVEL: {len(devel_asg_non_exists)}, MANAGE: {len(manage_asg_non_exists)}')
-        print(f'No IID Tag: {len(no_IID_tag)}, Not attached EBS: {len(not_attached_ebs)}')
+            elif volume_type == 'gp3':
+                gp3_ebs.add(volume_id)
 
-        # asg exists
+        # Print & save results
+        original_stdout = sys.stdout
+        with open(variables['FILE_PATH'] + 'status.txt', 'a') as f:
+            sys.stdout = f
+            print(f'ASG exists: {len(devel_asg_exists) + len(product_asg_exists) + len(manage_asg_exists)} -> PRODUCT: {len(product_asg_exists)}, DEVEL: {len(devel_asg_exists)}, MANAGE: {len(manage_asg_exists)}')
+            print(f'No ASG exits: {len(devel_asg_non_exists) + len(product_asg_non_exists) + len(manage_asg_non_exists)} -> PRODUCT: {len(product_asg_non_exists)}, DEVEL: {len(devel_asg_non_exists)}, MANAGE: {len(manage_asg_non_exists)}')
+            print(f'No IID Tag: {len(no_IID_tag)}, Not attached EBS: {len(not_attached_ebs)}\n')
+            sys.stdout = original_stdout
+
+        # Save the result into file
+        # 1) asg exists
         write_file('product_asg_exists', product_asg_exists)
         write_file('devel_asg_exists', devel_asg_exists)
 
-        # asg non exists
+        # 2) asg non exists
         write_file('product_asg_non_exists', product_asg_non_exists)
         write_file('devel_asg_non_exists', devel_asg_non_exists)
         write_file('manage_asg_non_exists', manage_asg_non_exists)
 
+        # 3) not attached ebs
         write_file('not_attached_ebs', not_attached_ebs)
+
+        # 4) gp3 ebs
+        write_file('gp3_ebs', gp3_ebs)
 
 
 def _check_vpc_env(vpc_id):
+    env = None
     if vpc_id.endswith(DEVEL_VPC):
         env = 'DEVEL'
     elif vpc_id.endswith(PRODUCT_VPC):
