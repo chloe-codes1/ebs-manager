@@ -1,5 +1,6 @@
 import boto3
 
+from configs.configs import DESIRED_EBS_TYPE
 
 class VolumeModifier:
 
@@ -9,6 +10,6 @@ class VolumeModifier:
     def modify_volume_type(self, volume_id):
         response = self.ec2_client.modify_volume(
             VolumeId=volume_id,
-            VolumeType='gp3'
+            VolumeType=DESIRED_EBS_TYPE
         )
         return response
