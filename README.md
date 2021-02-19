@@ -8,15 +8,15 @@
 ### Features
 
 #### EBS
-- List your EBS Volumes
-- Check EBS volume types
-- Check if your EBS volume's instance is composed with ASG
-- Modify your EBS volume type
+- [x] List your EBS Volumes
+- [x] Check EBS volume types
+- [x] Check if your EBS volume's instance is composed with ASG
+- [x] Modify your EBS volume type
 
 
 #### EC2
-- Get EC2 Tags
-- Get VPC ID of your instance
+- [x] Get EC2 Tags
+- [x] Get VPC ID of your instance
 
 
 
@@ -52,20 +52,39 @@ In `src/configs/configs.py`, you'll see some variables in there.
 Make changes to them as desired.
 
 ##### Variables
-- FILE_PATH
+- `FILE_PATH`
   - Literally file path
-- VOLUME_FILE
+- `VOLUME_FILE`
   - Name of the file to save ebs volumes
-- DEVEL_VPC
+- `CURRENT_EBS_TYPE`
+  - You're current EBS volume type
+- `DESIRED_EBS_TYPE`
+  - Desired EBS volume type to change
+- `DEVEL_VPC`
   - Your devel environment VPC ID
-- PRODUCT_VPC
+- `PRODUCT_VPC`
   - Your product environment VPC ID
-- MANAGE_VPC
+- `MANAGE_VPC`
   - Your manage environment VPC ID
 
 <br>
 
-#### 5. Now, run!
+#### 5. Call modify_volume_type() method 
+
+You may call modify_volume_type() method on your desired condition.
+
+##### Usage w/ example
+
+
+```python
+
+self.volume_modifier.modify_volume_type(volume_id)
+```
+
+
+<br>
+
+#### 6. Now, run!
 
 ```bash
 cd src
