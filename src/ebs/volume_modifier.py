@@ -2,6 +2,7 @@ import boto3
 
 from configs.configs import DESIRED_EBS_TYPE
 
+
 class VolumeModifier:
 
     def __init__(self):

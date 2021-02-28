@@ -55,6 +55,8 @@ class VolumeChecker:
             if volume_type == CURRENT_EBS_TYPE:
                 if not IID:
                     no_IID_tag.add(volume_id)
+                    # Modify EBS Volume type example
+                    # self.volume_modifier.modify_volume_type(volume_id)
 
                 # EBS volume attached to EC2 instance with ASG
                 elif IID[0] == 'yes':
@@ -69,10 +71,6 @@ class VolumeChecker:
                 elif IID[0] == 'no':
                     if env == 'DEVEL':
                         devel_asg_non_exists.add(volume_id)
-                        
-                        # Modify EBS Volume type example
-                        # self.volume_modifier.modify_volume_type(volume_id)
-
                     elif env == 'PRODUCT':
                         product_asg_non_exists.add(volume_id)
                     elif env == 'MANAGE':
@@ -81,10 +79,11 @@ class VolumeChecker:
             elif volume_type == DESIRED_EBS_TYPE:
                 gp3_ebs.add(volume_id)
 
-        # Print & save results
+        # ----------------------- Print & save results -----------------------
         original_stdout = sys.stdout
         with open(variables['FILE_PATH'] + 'status.txt', 'a') as f:
             sys.stdout = f
+            self.check_types()
             print(f'ASG exists: {len(devel_asg_exists) + len(product_asg_exists) + len(manage_asg_exists)} -> PRODUCT: {len(product_asg_exists)}, DEVEL: {len(devel_asg_exists)}, MANAGE: {len(manage_asg_exists)}')
             print(f'No ASG exits: {len(devel_asg_non_exists) + len(product_asg_non_exists) + len(manage_asg_non_exists)} -> PRODUCT: {len(product_asg_non_exists)}, DEVEL: {len(devel_asg_non_exists)}, MANAGE: {len(manage_asg_non_exists)}')
             print(f'No IID Tag: {len(no_IID_tag)}, Not attached EBS: {len(not_attached_ebs)}\n')
@@ -103,7 +102,10 @@ class VolumeChecker:
         # 3) not attached ebs
         write_file('not_attached_ebs', not_attached_ebs)
 
-        # 4) gp3 ebs
+        # 4) Instances w/ no IID Tag
+        write_file('no_IID_tag', no_IID_tag)
+
+        # 5) gp3 ebs
         write_file('gp3_ebs', gp3_ebs)
 
 
