@@ -1,6 +1,6 @@
 # EBS Manager
 
-🧑‍🔬 Manage your AWS EBS volumes easily and efficiently 
+👩🏼‍🔬 Manage your AWS EBS volumes easily and efficiently 
 
 <br>
 <br>
